@@ -48,6 +48,7 @@
   <div class="grid">
     <div class="card hero"><div class="label">Earning rate</div><div class="big" id="rateHour">—</div><div class="sub" id="rateWindow">measuring…</div><div class="sub" id="rateUsd"></div></div>
     <div class="card"><div class="label">Per day (at this rate)</div><div class="big" id="rateDay">—</div><div class="sub" id="rateDayUsd">projection, not a promise</div></div>
+    <div class="card"><div class="label">Per month (at this rate)</div><div class="big" id="rateMonth">—</div><div class="sub" id="rateMonthUsd">30-day projection</div></div>
     <div class="card"><div class="label">Total mined</div><div class="big" id="totalMined">—</div><div class="sub" id="totalSols">—</div><div class="sub" id="totalUsd"></div></div>
     <div class="card"><div class="label">In your Phantom</div><div class="big" id="walletBal">—</div><div class="sub" id="walletUsd">CPHii…TQxK</div></div>
   </div>
@@ -184,6 +185,7 @@ function render(net, wallet, rows, lifetime, sols) {
     $("rateHour").textContent = fmt(w.perHour) + " /hr";
     $("rateWindow").textContent = `FDNA, measured over last ${Math.round(w.mins)} min`;
     $("rateDay").textContent = fmt(w.perHour*24, 0);
+    $("rateMonth").textContent = fmt(w.perHour*24*30, 0);
     $("share").textContent = w.net > 0 ? fmt(100*w.mine/w.net, 1) + "%" : "—";
     $("shareSub").textContent = `${w.mine} of ${w.net} network solutions`;
   }
@@ -200,7 +202,8 @@ function render(net, wallet, rows, lifetime, sols) {
   $("priceSrc").textContent = priceSrc;
   $("totalUsd").textContent = usd(lifetime);
   $("walletUsd").textContent = price === null ? "CPHii…TQxK" : usd(wallet) + " · CPHii…TQxK";
-  if (w) { $("rateUsd").textContent = usd(w.perHour) + (price === null ? "" : " /hr"); $("rateDayUsd").textContent = price === null ? "projection, not a promise" : usd(w.perHour*24) + "/day · projection"; }
+  if (w) { $("rateUsd").textContent = usd(w.perHour) + (price === null ? "" : " /hr"); $("rateDayUsd").textContent = price === null ? "projection, not a promise" : usd(w.perHour*24) + "/day · projection";
+    $("rateMonthUsd").textContent = price === null ? "30-day projection" : usd(w.perHour*24*30) + "/month · projection"; }
 
   const tb = $("rows"); tb.textContent = "";
   for (const r of rows) {
