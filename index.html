@@ -46,17 +46,17 @@
   </header>
 
   <div class="grid">
-    <div class="card hero"><div class="label">Earning rate</div><div class="big" id="rateHour">—</div><div class="sub" id="rateWindow">measuring…</div></div>
-    <div class="card"><div class="label">Per day (at this rate)</div><div class="big" id="rateDay">—</div><div class="sub">projection, not a promise</div></div>
-    <div class="card"><div class="label">Total mined</div><div class="big" id="totalMined">—</div><div class="sub" id="totalSols">—</div></div>
-    <div class="card"><div class="label">In your Phantom</div><div class="big" id="walletBal">—</div><div class="sub">CPHii…TQxK</div></div>
+    <div class="card hero"><div class="label">Earning rate</div><div class="big" id="rateHour">—</div><div class="sub" id="rateWindow">measuring…</div><div class="sub" id="rateUsd"></div></div>
+    <div class="card"><div class="label">Per day (at this rate)</div><div class="big" id="rateDay">—</div><div class="sub" id="rateDayUsd">projection, not a promise</div></div>
+    <div class="card"><div class="label">Total mined</div><div class="big" id="totalMined">—</div><div class="sub" id="totalSols">—</div><div class="sub" id="totalUsd"></div></div>
+    <div class="card"><div class="label">In your Phantom</div><div class="big" id="walletBal">—</div><div class="sub" id="walletUsd">CPHii…TQxK</div></div>
   </div>
 
   <div class="grid">
     <div class="card"><div class="label">Session</div><div class="big" id="sessionGain">—</div><div class="sub" id="sessionTime">since this page opened</div></div>
     <div class="card"><div class="label">Network share</div><div class="big" id="share">—</div><div class="sub" id="shareSub">of solutions in window</div></div>
-    <div class="card"><div class="label">Difficulty</div><div class="big" id="difficulty">—</div><div class="sub" id="reward">—</div></div>
-    <div class="card"><div class="label">Network mined</div><div class="big" id="netMined">—</div><div class="sub" id="netSols">—</div></div>
+    <div class="card"><div class="label">Difficulty</div><div class="big" id="difficulty">—</div><div class="sub" id="reward">—</div><div class="sub" id="netMined">—</div></div>
+    <div class="card"><div class="label">FDNA price</div><div class="big" id="price">—</div><div class="sub" id="priceSrc">looking up…</div></div>
   </div>
 
   <h2>FDNA mined, last 24 hours</h2>
@@ -94,6 +94,24 @@ let samples = [];
 try { samples = JSON.parse(localStorage.getItem(STORE) || "[]"); } catch {}
 const opened = { t: Date.now(), mined: null };
 let lastTotals = {};
+const MINT = "V9TkMoDUrAiBBJPuVidc4xsYc5y3kUVM8XxQnMwmine";
+let price = null, priceSrc = "";
+async function fetchPrice() {
+  try {
+    const j = await (await fetch("https://lite-api.jup.ag/price/v3?ids=" + MINT)).json();
+    const p = j && j[MINT] && Number(j[MINT].usdPrice);
+    if (p > 0) { price = p; priceSrc = "Jupiter"; return; }
+  } catch {}
+  try {
+    const j = await (await fetch("https://api.dexscreener.com/latest/dex/tokens/" + MINT)).json();
+    const pairs = (j.pairs || []).filter(x => Number(x.priceUsd) > 0)
+      .sort((a, b) => ((b.liquidity||{}).usd||0) - ((a.liquidity||{}).usd||0));
+    if (pairs.length) { price = Number(pairs[0].priceUsd); priceSrc = "DexScreener · " + pairs[0].dexId; return; }
+  } catch {}
+  priceSrc = "no price found yet";
+}
+const usd = n => price === null ? "" : "≈ $" + (n*price).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
+const fmtPrice = p => p >= 1 ? "$" + p.toFixed(2) : p >= 0.01 ? "$" + p.toFixed(4) : "$" + p.toPrecision(3);
 
 async function rpc(method, params) {
   try { return await rpcAt(RPCS[rpcIdx], method, params); }
@@ -177,8 +195,12 @@ function render(net, wallet, rows, lifetime, sols) {
   $("sessionTime").textContent = `FDNA in ${Math.round((Date.now()-opened.t)/60000)} min on this page`;
   $("difficulty").textContent = net.difficulty + " bits";
   $("reward").textContent = fmt(net.reward) + " FDNA per solution";
-  $("netMined").textContent = fmt(net.mined, 0);
-  $("netSols").textContent = net.solutions.toLocaleString() + " solutions total";
+  $("netMined").textContent = "network: " + fmt(net.mined, 0) + " mined";
+  $("price").textContent = price === null ? "—" : fmtPrice(price);
+  $("priceSrc").textContent = priceSrc;
+  $("totalUsd").textContent = usd(lifetime);
+  $("walletUsd").textContent = price === null ? "CPHii…TQxK" : usd(wallet) + " · CPHii…TQxK";
+  if (w) { $("rateUsd").textContent = usd(w.perHour) + (price === null ? "" : " /hr"); $("rateDayUsd").textContent = price === null ? "projection, not a promise" : usd(w.perHour*24) + "/day · projection"; }
 
   const tb = $("rows"); tb.textContent = "";
   for (const r of rows) {
@@ -229,7 +251,7 @@ function drawChart() {
 }
 
 window.addEventListener("resize", drawChart);
-tick(); setInterval(tick, 15000);
+fetchPrice().then(tick); setInterval(tick, 15000); setInterval(fetchPrice, 60000);
 </script>
 </body>
 </html>
