@@ -113,8 +113,11 @@ async function tick() {
   try {
     const list = [CONFIG, WALLET_ATA];
     KEYS.forEach(k => list.push(k.key, k.miner, k.ata));
-    const res = await rpc("getMultipleAccounts", [list, { encoding:"base64", commitment:"confirmed" }]);
-    const v = res.value;
+    const v = [];
+    for (let i = 0; i < list.length; i += 10) {   // public RPCs allow at most 10 accounts per call
+      const res = await rpc("getMultipleAccounts", [list.slice(i, i+10), { encoding:"base64", commitment:"confirmed" }]);
+      v.push(...res.value);
+    }
     const data = i => v[i] ? bytes(v[i].data[0]) : null;
 
     const cfg = data(0);
